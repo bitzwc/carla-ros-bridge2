@@ -47,5 +47,5 @@ namespace shenlan {
             integral_ = 0.0;
             first_hit_ = true;
         }
-    }
-}
+    }    // namespace control
+}    // namespace shenlan
