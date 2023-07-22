@@ -1,4 +1,4 @@
-#ifndef PID_CONROLLER_H
+#ifndef PID_CONROLLER_H //检测PID_CONROLLER_H是否已经定义，未定义按下面的语句来定义，否则不执行
 #define PID_CONTROLER_H
 namespace shenlan
 {
