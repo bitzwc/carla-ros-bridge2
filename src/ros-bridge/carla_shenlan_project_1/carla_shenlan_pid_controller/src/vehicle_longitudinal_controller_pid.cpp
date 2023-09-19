@@ -32,9 +32,13 @@ VehicleControlPublisher::VehicleControlPublisher()
 
     vehicle_control_iteration_timer_ = this->create_wall_timer(50ms, std::bind(&VehicleControlPublisher::VehicleControlIterationCallback, this));
 
+    //订阅/carla/ego_vehicle/odometry，获取车辆的全局位置信息
     localization_data_subscriber = this->create_subscription<nav_msgs::msg::Odometry>("/carla/ego_vehicle/odometry", qos, std::bind(&VehicleControlPublisher::odomCallback, this, _1));
 
+    //发布控制命令的消息
     vehicle_control_publisher = this->create_publisher<carla_msgs::msg::CarlaEgoVehicleControl>("/carla/ego_vehicle/vehicle_control_cmd", qos);
+
+    //控制命令
     control_cmd.header.stamp = this->now();
     control_cmd.gear = 1;
     control_cmd.manual_gear_shift = false;
@@ -42,14 +46,17 @@ VehicleControlPublisher::VehicleControlPublisher()
     control_cmd.hand_brake = false;
 
     auto time_node_start = this->now();
+
+    //发布目标速度
     vehicle_control_target_velocity_publisher = this->create_publisher<carla_msgs::msg::CarlaVehicleTargetVelocity>("/carla/ego_vehicle/target_velocity", qos);
     vehicle_control_target_velocity.header.stamp = this->now();
     vehicle_control_target_velocity.velocity = 0.0;
 
+    //订阅/carla/ego_vehicle/vehicle_status，获取车辆状态
     carla_status_subscriber = this->create_subscription<carla_msgs::msg::CarlaEgoVehicleStatus>("/carla/ego_vehicle/vehicle_status", qos, std::bind(&VehicleControlPublisher::VehicleStatusCallback, this, _1));
     
 
-    // 读取参考线路径
+    //读取参考线路径，序号、时间、x、y、？、？、速度
     std::ifstream infile("src/ros-bridge/carla_shenlan_project_1/carla_shenlan_pid_controller/data/gps_data_2022_09_09_15_18_45.csv", ios::in);    //将文件流对象与文件连接起来
     assert(infile.is_open());                                                                                                                      //若失败,则输出错误消息,并终止程序运行
     
@@ -67,7 +74,11 @@ VehicleControlPublisher::VehicleControlPublisher()
         double pt_y = std::atof(subArray[3].c_str());
         double pt_v = std::atof(subArray[6].c_str());
         
+        //速度轨迹点
         v_points.push_back(pt_v);
+
+        //坐标轨迹点
+        //坐标轨迹点
         xy_points.push_back(std::make_pair(pt_x, pt_y));
     }
     infile.close();
@@ -248,6 +259,7 @@ void VehicleControlPublisher::VehicleControlIterationCallback()
     steer_cmd = 0;
     control_cmd.header.stamp = this->now();
 
+    //根据pid输出的控制量来决定控制的大小
     if (acceleration_cmd >= 1.0) {
         acceleration_cmd = 1.0;
     }
@@ -255,6 +267,7 @@ void VehicleControlPublisher::VehicleControlIterationCallback()
         acceleration_cmd = -1.0;
     }
 
+    //把控制的大小转化成刹车和油门的大小
     if (acceleration_cmd <= 0) {
         control_cmd.brake = -acceleration_cmd;
         control_cmd.throttle = 0;
@@ -269,6 +282,7 @@ void VehicleControlPublisher::VehicleControlIterationCallback()
     control_cmd.hand_brake = false;
     control_cmd.manual_gear_shift = false;
 
+    //发布控制，消息发布者
     vehicle_control_publisher->publish(control_cmd);
 
     // vehicle_control_target_velocity.header.stamp = this->now();
