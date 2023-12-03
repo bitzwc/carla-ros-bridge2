@@ -13,7 +13,8 @@ static const rclcpp::Logger LOGGER = rclcpp::get_logger("carla_shenlan_pid_contr
 // Controller
 shenlan::control::PIDController yaw_pid_controller(0.5, 0.3, 0.1);             // 转向角pid
 // shenlan::control::PIDController speed_pid_controller(0.206, 0.0206, 0.515);    // 速度pid Kp Ki Kd
-shenlan::control::PIDController speed_pid_controller(0.16, 0.02, 0.01);    // 速度pid Kp Ki Kd
+//kp:0.1-0.8,ki:0-0.1,kd:0.1-0.8
+shenlan::control::PIDController speed_pid_controller(0.2, 0, 0.02);    // 速度pid Kp Ki Kd
 
 VehicleControlPublisher::VehicleControlPublisher()
     : Node("carla_shenlan_pid_controller")
@@ -218,7 +219,7 @@ void VehicleControlPublisher::odomCallback(nav_msgs::msg::Odometry::SharedPtr ms
     vehicle_state_.vx = msg->twist.twist.linear.x;
     vehicle_state_.vy = msg->twist.twist.linear.y;
     vehicle_state_.vz = msg->twist.twist.linear.z;
-    vehicle_state_.v = std::sqrt(vehicle_state_.vx * vehicle_state_.vx + vehicle_state_.vy * vehicle_state_.vy + vehicle_state_.vz * vehicle_state_.vz) * 3.6;    // 本车速度
+    vehicle_state_.v = std::sqrt(vehicle_state_.vx * vehicle_state_.vx + vehicle_state_.vy * vehicle_state_.vy + vehicle_state_.vz * vehicle_state_.vz) * 3.6;    // 本车速度，m/s转化成km/h？
     vehicle_state_.heading = vehicle_state_.yaw;                                                                                                                  // pose.orientation是四元数
 }
 
@@ -232,12 +233,12 @@ void VehicleControlPublisher::VehicleControlIterationCallback()
 - Comments    : None
 **************************************************************************************'''*/
 {
-    TrajectoryPoint target_point_;
+    TrajectoryPoint target_point_;差
+    double yaw_err = vehicle_state_.heading - target_point_.heading;    // 横摆角误差
 
     target_point_ = this->QueryNearestPointByPosition(vehicle_state_.x, vehicle_state_.y);
 
-    double v_err = target_point_.v - vehicle_state_.v;                  // 速度误差
-    double yaw_err = vehicle_state_.heading - target_point_.heading;    // 横摆角误差
+    double v_err = target_point_.v - vehicle_state_.v;                  // 速度误
 
     if (yaw_err > M_PI / 6) {
         yaw_err = M_PI / 6;
@@ -245,16 +246,20 @@ void VehicleControlPublisher::VehicleControlIterationCallback()
         yaw_err = -M_PI / 6;
     }
 
+    acceleration_cmd = speed_pid_controller.Control(v_err, 0.05);
+    // steer_cmd = yaw_pid_controller.Control(yaw_err, 0.01);
+
     if (cnt % 1 == 0) {
         // cout << "start_heading: " << vehicle_state_.start_heading << endl;
         // cout << "heading: " << vehicle_state_.heading << endl;
-        cout << "~~ vehicle_state_.v: " << vehicle_state_.v * 3.6 << ", target_point_.v: " << target_point_.v << ", v_err: " << v_err << endl;
+        //为什么乘以 3.6？ m/s转换成km/h？
+        cout << "~~ vehicle_state_.v: " << vehicle_state_.v;
+        cout << ", target_point_.v: " << target_point_.v;
+        cout << ", v_err: " << v_err;
+        cout << ", pid control: " << acceleration_cmd << endl;
         // cout << "yaw_err: " << yaw_err << endl;
         // cout << "control_cmd.target_wheel_angle: " << control_cmd.target_wheel_angle << endl;
     }
-
-    acceleration_cmd = speed_pid_controller.Control(v_err, 0.05);
-    // steer_cmd = yaw_pid_controller.Control(yaw_err, 0.01);
 
     steer_cmd = 0;
     control_cmd.header.stamp = this->now();

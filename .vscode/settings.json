@@ -77,7 +77,8 @@
         "mprealsupport": "cpp",
         "splines": "cpp",
         "spline.h": "c",
-        "hash_set": "cpp"
+        "hash_set": "cpp",
+        "*.txx": "cpp"
     },
     "python.autoComplete.extraPaths": [
         "/opt/ros/foxy/lib/python3.8/site-packages",
@@ -94,4 +95,5 @@
     ],
     "git.ignoreLimitWarning": true,
     "cmake.configureOnOpen": false,
+    "cmake.sourceDirectory": "/home/zhangwencheng/Documents/project/carla-ros-bridge/build/carla_ackermann_msgs/carla_ackermann_msgs__py",
 }
